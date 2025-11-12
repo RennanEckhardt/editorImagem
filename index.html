@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PSE-Image - Editor de Fluxos (Grayscale)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="min-h-screen flex flex-col">
+  <header class="bg-white shadow-md p-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold text-gray-800 flex items-center">
+      <i data-lucide="layout-dashboard" class="mr-2 text-blue-500"></i>
+      PSE-Image - Editor de Fluxos
+    </h1>
+    <div class="text-xs text-gray-500">Processamento: JavaScript puro (sem métodos prontos)</div>
+  </header>
+
+  <main class="flex-grow flex overflow-hidden">
+    <aside class="w-64 bg-gray-50 p-4 border-r border-gray-200 overflow-y-auto">
+      <h2 class="text-lg font-semibold mb-3 text-gray-700 flex items-center">
+        <i data-lucide="blocks" class="w-5 h-5 mr-1"></i> Blocos
+      </h2>
+      <div class="space-y-3">
+        <div class="text-sm font-medium text-gray-600 border-b pb-1">E/S</div>
+        <button data-block-id="read_file" class="block-item w-full text-left p-3 bg-white rounded-lg text-blue-700">
+          <i data-lucide="file-input" class="w-4 h-4 inline mr-1"></i> Leitura de Arquivo
+        </button>
+        <button data-block-id="display_image" class="block-item w-full text-left p-3 bg-white rounded-lg text-emerald-700">
+          <i data-lucide="eye" class="w-4 h-4 inline mr-1"></i> Exibição de Imagem
+        </button>
+        <button data-block-id="save_file" class="block-item w-full text-left p-3 bg-white rounded-lg text-blue-700">
+          <i data-lucide="save" class="w-4 h-4 inline mr-1"></i> Gravação de Arquivo
+        </button>
+
+        <div class="text-sm font-medium text-gray-600 border-b pb-1 pt-4">Processamento</div>
+        <button data-block-id="brightness" class="block-item w-full text-left p-3 bg-white rounded-lg text-red-700">
+          <i data-lucide="sun" class="w-4 h-4 inline mr-1"></i> Brilho
+        </button>
+        <button data-block-id="threshold" class="block-item w-full text-left p-3 bg-white rounded-lg text-red-700">
+          <i data-lucide="sliders-horizontal" class="w-4 h-4 inline mr-1"></i> Limiarização
+        </button>
+        <button data-block-id="convolution" class="block-item w-full text-left p-3 bg-white rounded-lg text-purple-700">
+          <i data-lucide="boxes" class="w-4 h-4 inline mr-1"></i> Convolução
+        </button>
+
+        <div class="text-sm font-medium text-gray-600 border-b pb-1 pt-4">Análise</div>
+        <button data-block-id="histogram" class="block-item w-full text-left p-3 bg-white rounded-lg text-orange-700">
+          <i data-lucide="bar-chart-2" class="w-4 h-4 inline mr-1"></i> Histograma
+        </button>
+        <button data-block-id="difference" class="block-item w-full text-left p-3 bg-white rounded-lg text-indigo-700">
+          <i data-lucide="minus" class="w-4 h-4 inline mr-1"></i> Diferença entre Imagens
+        </button>
+      </div>
+    </aside>
+
+    <section class="flex-grow flex flex-col p-4 overflow-hidden relative">
+      <div id="loading-overlay" class="loading-overlay absolute inset-0 hidden">
+        <div class="spinner mb-4"></div>
+        <p class="text-gray-700 font-semibold">Processando imagem...</p>
+      </div>
+
+      <div class="flex space-x-2 mb-4">
+        <button id="new-flow-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium flex items-center hover:bg-gray-300">
+          <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Novo Fluxo
+        </button>
+        <button id="run-flow-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center hover:bg-blue-700">
+          <i data-lucide="play" class="w-4 h-4 mr-1"></i> Executar Fluxo
+        </button>
+      </div>
+
+      <div class="flex flex-grow space-x-4 overflow-hidden">
+        <div class="w-1/2 bg-white rounded-xl shadow-lg p-4 overflow-y-auto">
+          <h2 class="text-lg font-semibold mb-3 text-gray-700 flex items-center border-b pb-2">
+            <i data-lucide="workflow" class="w-5 h-5 mr-1"></i> Fluxo
+          </h2>
+          <div id="flow-container" class="space-y-2"></div>
+        </div>
+
+        <div class="w-1/2 bg-white rounded-xl shadow-lg p-4 flex flex-col">
+          <h2 class="text-lg font-semibold mb-3 text-gray-700 flex items-center border-b pb-2">
+            <i data-lucide="image" class="w-5 h-5 mr-1"></i> Visualização
+          </h2>
+          <canvas id="image-canvas" class="bg-black rounded-lg w-full flex-grow" style="min-height: 300px;"></canvas>
+          <p id="image-info" class="text-xs text-gray-600 mt-1">Nenhuma imagem carregada.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modais -->
+  <!-- Modal de Leitura de Arquivo -->
+  <div id="read-file-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl w-96">
+      <h3 class="text-xl font-bold mb-4">Leitura de Arquivo</h3>
+      <input type="file" id="raw-file-input" accept=".png,.jpg,.jpeg,.raw,.bin" class="w-full mb-3 p-2 border rounded">
+      <div class="flex space-x-2 mb-3">
+        <input type="number" id="raw-width" value="256" placeholder="Largura" class="w-1/2 p-2 border rounded" min="1">
+        <input type="number" id="raw-height" value="256" placeholder="Altura" class="w-1/2 p-2 border rounded" min="1">
+      </div>
+      <p class="text-xs text-gray-500 mb-3">Nota: Largura e altura são necessárias apenas para arquivos RAW binários.</p>
+      <div class="flex space-x-2">
+        <button id="add-read-file-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Carregar</button>
+        <button onclick="document.getElementById('read-file-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Limiarização -->
+  <div id="threshold-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl w-96">
+      <h3 class="text-xl font-bold mb-4">Limiarização</h3>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Valor de Limiar (0-255)</label>
+      <input type="number" id="threshold-value" min="0" max="255" value="128" class="w-full p-2 border rounded mb-4">
+      <div class="flex space-x-2">
+        <button id="add-threshold-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Adicionar</button>
+        <button onclick="document.getElementById('threshold-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Brilho -->
+  <div id="brightness-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl w-96">
+      <h3 class="text-xl font-bold mb-4">Brilho</h3>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Valor de Ajuste (-255 a 255)</label>
+      <input type="number" id="brightness-value" value="50" min="-255" max="255" class="w-full p-2 border rounded mb-4">
+      <div class="flex space-x-2">
+        <button id="add-brightness-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Adicionar</button>
+        <button onclick="document.getElementById('brightness-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Convolução -->
+  <div id="convolution-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl w-96 max-h-[90vh] overflow-y-auto">
+      <h3 class="text-xl font-bold mb-4">Convolução</h3>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Máscara</label>
+      <select id="convolution-kernel-type" class="w-full p-2 border rounded mb-3">
+        <option value="mean">Média</option>
+        <option value="laplacian">Laplaciano (4-vizinhança)</option>
+        <option value="laplacian8">Laplaciano (8-vizinhança)</option>
+        <option value="median">Mediana</option>
+        <option value="custom">Customizado</option>
+      </select>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Tamanho da Máscara</label>
+      <input type="number" id="convolution-kernel-size" value="3" min="3" max="15" step="2" class="w-full p-2 border rounded mb-3">
+      <div id="custom-kernel-container" class="hidden mb-3">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Kernel Customizado (uma linha por linha, valores separados por espaço)</label>
+        <textarea id="convolution-kernel-custom" rows="5" class="w-full p-2 border rounded font-mono text-sm" placeholder="0.11 0.11 0.11&#10;0.11 0.11 0.11&#10;0.11 0.11 0.11"></textarea>
+      </div>
+      <div class="flex space-x-2">
+        <button id="add-convolution-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Adicionar</button>
+        <button onclick="document.getElementById('convolution-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Gravação de Arquivo -->
+  <div id="save-file-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl w-96">
+      <h3 class="text-xl font-bold mb-4">Gravação de Arquivo</h3>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Selecione a Imagem</label>
+      <select id="save-file-image-id" data-image-select class="w-full p-2 border rounded mb-3">
+        <option value="">Carregando...</option>
+      </select>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Arquivo (opcional)</label>
+      <input type="text" id="save-file-filename" placeholder="image.raw" class="w-full p-2 border rounded mb-4">
+      <div class="flex space-x-2">
+        <button id="add-save-file-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Salvar</button>
+        <button onclick="document.getElementById('save-file-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Histograma -->
+  <div id="histogram-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl w-96">
+      <h3 class="text-xl font-bold mb-4">Histograma</h3>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Selecione a Imagem</label>
+      <select id="histogram-image-id" data-image-select class="w-full p-2 border rounded mb-4">
+        <option value="">Carregando...</option>
+      </select>
+      <canvas id="histogram-canvas" width="256" height="200" class="w-full border rounded mb-4"></canvas>
+      <div class="flex space-x-2">
+        <button id="add-histogram-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Calcular</button>
+        <button onclick="document.getElementById('histogram-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Diferença entre Imagens -->
+  <div id="difference-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl w-96">
+      <h3 class="text-xl font-bold mb-4">Diferença entre Imagens</h3>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Primeira Imagem</label>
+      <select id="difference-image-id-1" data-image-select class="w-full p-2 border rounded mb-3">
+        <option value="">Carregando...</option>
+      </select>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Segunda Imagem</label>
+      <select id="difference-image-id-2" data-image-select class="w-full p-2 border rounded mb-4">
+        <option value="">Carregando...</option>
+      </select>
+      <div class="flex space-x-2">
+        <button id="add-difference-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Calcular</button>
+        <button onclick="document.getElementById('difference-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/utils/imageStorage.js"></script>
+  <script src="js/utils/imageUtils.js"></script>
+  <script src="js/blocks/readFile.js"></script>
+  <script src="js/blocks/displayImage.js"></script>
+  <script src="js/blocks/saveFile.js"></script>
+  <script src="js/blocks/brightness.js"></script>
+  <script src="js/blocks/threshold.js"></script>
+  <script src="js/blocks/convolution.js"></script>
+  <script src="js/blocks/histogram.js"></script>
+  <script src="js/blocks/difference.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
+
