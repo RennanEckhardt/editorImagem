@@ -101,6 +101,21 @@ class PSEImage {
       this.handleCompareImages();
     });
 
+    // Fechar visualização em tela cheia de comparação
+    document.getElementById('close-compare-fullscreen').addEventListener('click', () => {
+      document.getElementById('compare-images-fullscreen').classList.add('hidden');
+    });
+
+    // Fechar com ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const fullscreen = document.getElementById('compare-images-fullscreen');
+        if (!fullscreen.classList.contains('hidden')) {
+          fullscreen.classList.add('hidden');
+        }
+      }
+    });
+
     // Modal de histograma
     document.getElementById('add-histogram-btn').addEventListener('click', () => {
       this.handleHistogram();
@@ -150,16 +165,57 @@ class PSEImage {
 
   async handleReadFile() {
     const file = document.getElementById('raw-file-input').files[0];
-    const width = parseInt(document.getElementById('raw-width').value);
-    const height = parseInt(document.getElementById('raw-height').value);
+    const widthInput = document.getElementById('raw-width').value;
+    const heightInput = document.getElementById('raw-height').value;
     
     if (!file) {
       alert('Selecione um arquivo!');
       return;
     }
 
+    // Verificar se é arquivo RAW pela extensão
+    const fileName = file.name.toLowerCase();
+    const isRawFile = fileName.endsWith('.raw') || fileName.endsWith('.bin');
+    
+    // Se for RAW e não tiver dimensões informadas, tentar ler do cabeçalho
+    if (isRawFile) {
+      const width = parseInt(widthInput);
+      const height = parseInt(heightInput);
+      
+      // Se não tem dimensões, tentar ler automaticamente
+      if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
+        try {
+          this.showLoading(true);
+          const header = await this.blocks.readFile.readRawHeader(file);
+          
+          if (header) {
+            // Preencher campos automaticamente
+            document.getElementById('raw-width').value = header.width;
+            document.getElementById('raw-height').value = header.height;
+            // Continuar com o processamento
+          } else {
+            // Arquivo sem cabeçalho, precisa informar dimensões
+            alert('Este arquivo RAW não possui cabeçalho com dimensões.\n\n' +
+                  'Arquivos salvos por esta aplicação incluem as dimensões automaticamente.\n' +
+                  'Para arquivos antigos, informe as dimensões manualmente.');
+            this.showLoading(false);
+            return;
+          }
+        } catch (error) {
+          this.showLoading(false);
+          alert('Erro ao ler cabeçalho do arquivo: ' + error.message);
+          return;
+        }
+      }
+    }
+
     try {
       this.showLoading(true);
+      
+      // Passar dimensões (podem ter sido preenchidas automaticamente)
+      const width = parseInt(document.getElementById('raw-width').value) || null;
+      const height = parseInt(document.getElementById('raw-height').value) || null;
+      
       const result = await this.blocks.readFile.process(file, width, height);
       this.currentImageId = result.imageId;
       this.addFlowStep('read_file', { imageId: result.imageId, width: result.width, height: result.height });
@@ -170,6 +226,7 @@ class PSEImage {
       
       document.getElementById('read-file-modal').classList.add('hidden');
     } catch (error) {
+      console.error('Erro ao carregar arquivo:', error);
       alert('Erro ao carregar arquivo: ' + error.message);
     } finally {
       this.showLoading(false);
@@ -270,8 +327,25 @@ class PSEImage {
     }
 
     try {
-      this.blocks.saveFile.process(imageId, filename);
+      const result = this.blocks.saveFile.process(imageId, filename);
+      const image = this.imageStorage.getImage(imageId);
+      
+      // Mensagem informativa sobre como carregar o arquivo
+      alert(`Arquivo salvo com sucesso!\n\n` +
+            `Arquivo: ${result.filename}\n` +
+            `Dimensões: ${result.width}x${result.height}\n` +
+            `Tamanho: ${result.size} bytes\n\n` +
+            `✨ NOVO: As dimensões foram salvas automaticamente no arquivo!\n\n` +
+            `Para carregar este arquivo RAW novamente:\n` +
+            `1. Use o botão "Leitura de Arquivo"\n` +
+            `2. Selecione o arquivo .raw\n` +
+            `3. As dimensões serão detectadas automaticamente\n` +
+            `4. Clique em "Carregar"\n\n` +
+            `(Arquivos antigos sem cabeçalho ainda precisam das dimensões informadas manualmente)`);
+      
       document.getElementById('save-file-modal').classList.add('hidden');
+      // Limpar campo de nome de arquivo
+      document.getElementById('save-file-filename').value = '';
     } catch (error) {
       alert('Erro ao salvar arquivo: ' + error.message);
     }
@@ -297,9 +371,27 @@ class PSEImage {
     }
 
     try {
-      const result = this.blocks.compareImages.process(imageId1, imageId2);
-      this.updateImageInfo(result.width, result.height);
+      // Obter canvas de comparação em tela cheia
+      const compareCanvas = document.getElementById('compare-canvas');
+      const image1 = this.imageStorage.getImage(imageId1);
+      const image2 = this.imageStorage.getImage(imageId2);
+      
+      // Criar instância temporária do bloco com o canvas de comparação
+      const compareBlock = new CompareImagesBlock(compareCanvas, this.imageStorage);
+      const result = compareBlock.process(imageId1, imageId2);
+      
+      // Atualizar informações
+      const infoText = `Imagem 1: ${image1.width}x${image1.height} | Imagem 2: ${image2.width}x${image2.height} | Canvas: ${result.width}x${result.height}`;
+      document.getElementById('compare-images-info').textContent = infoText;
+      
+      // Fechar modal de seleção e abrir visualização em tela cheia
       document.getElementById('compare-images-modal').classList.add('hidden');
+      document.getElementById('compare-images-fullscreen').classList.remove('hidden');
+      
+      // Atualizar ícones do Lucide
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
     } catch (error) {
       alert('Erro ao comparar imagens: ' + error.message);
     }

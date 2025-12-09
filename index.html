@@ -219,7 +219,7 @@
     </div>
   </div>
 
-  <!-- Modal de Comparar Imagens -->
+  <!-- Modal de Seleção para Comparar Imagens -->
   <div id="compare-images-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white p-6 rounded-xl w-96">
       <h3 class="text-xl font-bold mb-4">Comparar Imagens</h3>
@@ -235,6 +235,22 @@
         <button id="add-compare-images-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Comparar</button>
         <button onclick="document.getElementById('compare-images-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal de Visualização em Tela Cheia para Comparar Imagens -->
+  <div id="compare-images-fullscreen" class="hidden fixed inset-0 bg-black z-[60] flex flex-col">
+    <div class="bg-gray-900 text-white p-4 flex justify-between items-center border-b border-gray-700">
+      <h3 class="text-xl font-bold">Comparação de Imagens</h3>
+      <button id="close-compare-fullscreen" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center">
+        <i data-lucide="x" class="w-4 h-4 mr-1"></i> Fechar
+      </button>
+    </div>
+    <div class="flex-grow flex items-center justify-center p-4 overflow-auto">
+      <canvas id="compare-canvas" class="max-w-full max-h-full bg-black"></canvas>
+    </div>
+    <div class="bg-gray-900 text-white p-2 text-center text-sm border-t border-gray-700">
+      <p id="compare-images-info" class="text-gray-400">Selecione duas imagens para comparar</p>
     </div>
   </div>
 
