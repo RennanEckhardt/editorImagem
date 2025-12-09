@@ -150,41 +150,80 @@ class ReadFileBlock {
    */
   async readRawHeader(file) {
     return new Promise((resolve, reject) => {
+      // Verificar tamanho do arquivo primeiro
+      const fileSize = file.size;
+      
+      // Precisa ter pelo menos 8 bytes para o cabeçalho
+      if (fileSize < 8) {
+        resolve(null); // Arquivo muito pequeno, sem cabeçalho
+        return;
+      }
+      
       const reader = new FileReader();
       
       reader.onload = (e) => {
         try {
           const arrayBuffer = e.target.result;
-          const bytes = new Uint8Array(arrayBuffer);
           
           // Precisa ter pelo menos 8 bytes para o cabeçalho
-          if (bytes.length < 8) {
-            resolve(null); // Arquivo muito pequeno, sem cabeçalho
+          if (arrayBuffer.byteLength < 8) {
+            resolve(null);
             return;
           }
           
           // Ler cabeçalho (primeiros 8 bytes)
-          const headerView = new DataView(arrayBuffer.slice(0, 8));
+          const headerView = new DataView(arrayBuffer);
           const width = headerView.getUint32(0, false);  // Big-endian
           const height = headerView.getUint32(4, false); // Big-endian
           
           // Validar dimensões (valores razoáveis)
           if (width > 0 && width < 100000 && height > 0 && height < 100000) {
-            const expectedSize = width * height;
-            // Verificar se o tamanho do arquivo faz sentido (8 bytes header + dados)
-            if (bytes.length >= 8 + expectedSize && bytes.length <= 8 + expectedSize + 100) {
-              resolve({ width, height });
-              return;
+            const expectedDataSize = width * height;
+            const expectedTotalSize = 8 + expectedDataSize;
+            
+            console.log(`Lendo cabeçalho: width=${width}, height=${height}, fileSize=${fileSize}, expectedTotalSize=${expectedTotalSize}`);
+            
+            // Verificar se o tamanho do arquivo faz sentido
+            // O arquivo deve ter pelo menos o tamanho mínimo esperado (cabeçalho + dados)
+            // Se o arquivo for muito maior, pode ser que não tenha cabeçalho
+            // Mas vamos ser mais permissivos - se as dimensões são válidas e o arquivo
+            // tem pelo menos o tamanho mínimo, aceitar
+            if (fileSize >= expectedTotalSize) {
+              // Se o arquivo for muito maior (mais de 2x), provavelmente não tem cabeçalho
+              // Mas se for até 2x maior, pode ser válido (arquivos podem ter padding, etc)
+              const maxSize = expectedTotalSize * 2; // Permitir até 2x maior
+              if (fileSize <= maxSize) {
+                console.log(`✓ Cabeçalho detectado e validado: ${width}x${height}, arquivo: ${fileSize} bytes, esperado: ${expectedTotalSize} bytes`);
+                resolve({ width, height });
+                return;
+              } else {
+                console.log(`✗ Arquivo muito grande (${fileSize} bytes) para dimensões ${width}x${height} (esperado: ${expectedTotalSize} bytes, máximo: ${maxSize} bytes)`);
+              }
+            } else {
+              // Arquivo menor que o esperado - pode ser que não tenha cabeçalho
+              // Mas vamos verificar se pode ser um arquivo antigo (sem cabeçalho)
+              // Se o tamanho do arquivo for exatamente width*height, não tem cabeçalho
+              if (fileSize === expectedDataSize) {
+                console.log(`✗ Arquivo parece não ter cabeçalho (tamanho exato dos dados: ${fileSize} bytes)`);
+              } else {
+                console.log(`✗ Arquivo muito pequeno (${fileSize} bytes) para dimensões ${width}x${height} (esperado: ${expectedTotalSize} bytes)`);
+              }
             }
+          } else {
+            console.log(`✗ Dimensões inválidas no cabeçalho: ${width}x${height}`);
           }
           
           resolve(null); // Cabeçalho inválido ou não existe
         } catch (error) {
+          console.error('Erro ao ler cabeçalho:', error);
           resolve(null); // Erro ao ler, assume que não tem cabeçalho
         }
       };
       
-      reader.onerror = () => resolve(null);
+      reader.onerror = () => {
+        console.error('Erro ao ler arquivo para cabeçalho');
+        resolve(null);
+      };
       
       // Ler apenas os primeiros 8 bytes para verificar o cabeçalho
       reader.readAsArrayBuffer(file.slice(0, 8));

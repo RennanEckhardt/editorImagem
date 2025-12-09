@@ -186,14 +186,17 @@ class PSEImage {
       if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
         try {
           this.showLoading(true);
+          console.log('Tentando ler cabeçalho do arquivo:', file.name, 'Tamanho:', file.size, 'bytes');
           const header = await this.blocks.readFile.readRawHeader(file);
           
           if (header) {
+            console.log('Cabeçalho lido com sucesso:', header);
             // Preencher campos automaticamente
             document.getElementById('raw-width').value = header.width;
             document.getElementById('raw-height').value = header.height;
             // Continuar com o processamento
           } else {
+            console.log('Cabeçalho não encontrado no arquivo');
             // Arquivo sem cabeçalho, precisa informar dimensões
             alert('Este arquivo RAW não possui cabeçalho com dimensões.\n\n' +
                   'Arquivos salvos por esta aplicação incluem as dimensões automaticamente.\n' +
@@ -202,6 +205,7 @@ class PSEImage {
             return;
           }
         } catch (error) {
+          console.error('Erro ao ler cabeçalho:', error);
           this.showLoading(false);
           alert('Erro ao ler cabeçalho do arquivo: ' + error.message);
           return;
