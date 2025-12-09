@@ -339,7 +339,7 @@ class PSEImage {
             `Arquivo: ${result.filename}\n` +
             `Dimensões: ${result.width}x${result.height}\n` +
             `Tamanho: ${result.size} bytes\n\n` +
-            `✨ NOVO: As dimensões foram salvas automaticamente no arquivo!\n\n` +
+            `As dimensões foram salvas automaticamente no arquivo!\n\n` +
             `Para carregar este arquivo RAW novamente:\n` +
             `1. Use o botão "Leitura de Arquivo"\n` +
             `2. Selecione o arquivo .raw\n` +
