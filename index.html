@@ -18,72 +18,100 @@
     <div class="text-xs text-gray-500">Processamento: JavaScript puro (sem métodos prontos)</div>
   </header>
 
+  <!-- Área principal da aplicação: contém a sidebar de blocos e a área de trabalho -->
   <main class="flex-grow flex overflow-hidden">
+    <!-- Sidebar esquerda: painel de blocos disponíveis para adicionar ao fluxo -->
     <aside class="w-64 bg-gray-50 p-4 border-r border-gray-200 overflow-y-auto">
       <h2 class="text-lg font-semibold mb-3 text-gray-700 flex items-center">
         <i data-lucide="blocks" class="w-5 h-5 mr-1"></i> Blocos
       </h2>
       <div class="space-y-3">
+        <!-- Seção de Entrada/Saída (E/S): blocos para carregar, exibir e salvar imagens -->
         <div class="text-sm font-medium text-gray-600 border-b pb-1">E/S</div>
+        <!-- Botão para carregar uma imagem do sistema de arquivos -->
         <button data-block-id="read_file" class="block-item w-full text-left p-3 bg-white rounded-lg text-blue-700">
           <i data-lucide="file-input" class="w-4 h-4 inline mr-1"></i> Leitura de Arquivo
         </button>
+        <!-- Botão para exibir uma imagem gerada (abre modal de seleção) -->
         <button data-block-id="display_image" class="block-item w-full text-left p-3 bg-white rounded-lg text-emerald-700">
           <i data-lucide="eye" class="w-4 h-4 inline mr-1"></i> Exibição de Imagem
         </button>
+        <!-- Botão para salvar uma imagem como arquivo RAW -->
         <button data-block-id="save_file" class="block-item w-full text-left p-3 bg-white rounded-lg text-blue-700">
           <i data-lucide="save" class="w-4 h-4 inline mr-1"></i> Gravação de Arquivo
         </button>
 
+        <!-- Seção de Processamento: blocos que modificam a imagem -->
         <div class="text-sm font-medium text-gray-600 border-b pb-1 pt-4">Processamento</div>
+        <!-- Botão para ajustar o brilho da imagem -->
         <button data-block-id="brightness" class="block-item w-full text-left p-3 bg-white rounded-lg text-red-700">
           <i data-lucide="sun" class="w-4 h-4 inline mr-1"></i> Brilho
         </button>
+        <!-- Botão para aplicar limiarização (binarização) na imagem -->
         <button data-block-id="threshold" class="block-item w-full text-left p-3 bg-white rounded-lg text-red-700">
           <i data-lucide="sliders-horizontal" class="w-4 h-4 inline mr-1"></i> Limiarização
         </button>
+        <!-- Botão para aplicar filtros de convolução (média, laplaciano, mediana, etc.) -->
         <button data-block-id="convolution" class="block-item w-full text-left p-3 bg-white rounded-lg text-purple-700">
           <i data-lucide="boxes" class="w-4 h-4 inline mr-1"></i> Convolução
         </button>
 
+        <!-- Seção de Análise: blocos para analisar e comparar imagens -->
         <div class="text-sm font-medium text-gray-600 border-b pb-1 pt-4">Análise</div>
+        <!-- Botão para calcular e exibir o histograma da imagem -->
         <button data-block-id="histogram" class="block-item w-full text-left p-3 bg-white rounded-lg text-orange-700">
           <i data-lucide="bar-chart-2" class="w-4 h-4 inline mr-1"></i> Histograma
         </button>
+        <!-- Botão para calcular a diferença pixel a pixel entre duas imagens -->
         <button data-block-id="difference" class="block-item w-full text-left p-3 bg-white rounded-lg text-indigo-700">
           <i data-lucide="minus" class="w-4 h-4 inline mr-1"></i> Diferença entre Imagens
+        </button>
+        <!-- Botão para exibir duas imagens lado a lado para comparação visual -->
+        <button data-block-id="compare_images" class="block-item w-full text-left p-3 bg-white rounded-lg text-cyan-700">
+          <i data-lucide="columns" class="w-4 h-4 inline mr-1"></i> Comparar Imagens
         </button>
       </div>
     </aside>
 
+    <!-- Área de trabalho principal: contém os controles e visualização -->
     <section class="flex-grow flex flex-col p-4 overflow-hidden relative">
+      <!-- Overlay de carregamento: exibido durante o processamento de imagens -->
       <div id="loading-overlay" class="loading-overlay absolute inset-0 hidden">
         <div class="spinner mb-4"></div>
         <p class="text-gray-700 font-semibold">Processando imagem...</p>
       </div>
 
+      <!-- Barra de controles: botões para gerenciar o fluxo de processamento -->
       <div class="flex space-x-2 mb-4">
+        <!-- Botão para limpar o fluxo atual e começar um novo -->
         <button id="new-flow-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium flex items-center hover:bg-gray-300">
           <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Novo Fluxo
         </button>
+        <!-- Botão para executar todos os blocos do fluxo em sequência -->
         <button id="run-flow-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center hover:bg-blue-700">
           <i data-lucide="play" class="w-4 h-4 mr-1"></i> Executar Fluxo
         </button>
       </div>
 
+      <!-- Área de conteúdo: dividida em duas colunas -->
       <div class="flex flex-grow space-x-4 overflow-hidden">
+        <!-- Coluna esquerda: lista de blocos adicionados ao fluxo -->
         <div class="w-1/2 bg-white rounded-xl shadow-lg p-4 overflow-y-auto">
           <h2 class="text-lg font-semibold mb-3 text-gray-700 flex items-center border-b pb-2">
             <i data-lucide="workflow" class="w-5 h-5 mr-1"></i> Fluxo
           </h2>
+          <!-- Container onde os blocos do fluxo são renderizados dinamicamente -->
           <div id="flow-container" class="space-y-2"></div>
         </div>
 
+        <!-- Coluna direita: área de visualização da imagem -->
         <div class="w-1/2 bg-white rounded-xl shadow-lg p-4 flex flex-col">
           <h2 class="text-lg font-semibold mb-3 text-gray-700 flex items-center border-b pb-2">
             <i data-lucide="image" class="w-5 h-5 mr-1"></i> Visualização
           </h2>
+          <!-- Canvas HTML5: onde as imagens são renderizadas -->
           <canvas id="image-canvas" class="bg-black rounded-lg w-full flex-grow" style="min-height: 300px;"></canvas>
+          <!-- Informações da imagem: exibe dimensões (largura x altura) -->
           <p id="image-info" class="text-xs text-gray-600 mt-1">Nenhuma imagem carregada.</p>
         </div>
       </div>
@@ -159,6 +187,21 @@
     </div>
   </div>
 
+  <!-- Modal de Exibição de Imagem -->
+  <div id="display-image-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl w-96">
+      <h3 class="text-xl font-bold mb-4">Exibição de Imagem</h3>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Selecione a Imagem</label>
+      <select id="display-image-id" data-image-select class="w-full p-2 border rounded mb-4">
+        <option value="">Carregando...</option>
+      </select>
+      <div class="flex space-x-2">
+        <button id="add-display-image-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Exibir</button>
+        <button onclick="document.getElementById('display-image-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de Gravação de Arquivo -->
   <div id="save-file-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white p-6 rounded-xl w-96">
@@ -172,6 +215,25 @@
       <div class="flex space-x-2">
         <button id="add-save-file-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Salvar</button>
         <button onclick="document.getElementById('save-file-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Comparar Imagens -->
+  <div id="compare-images-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-xl w-96">
+      <h3 class="text-xl font-bold mb-4">Comparar Imagens</h3>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Primeira Imagem</label>
+      <select id="compare-image-id-1" data-image-select class="w-full p-2 border rounded mb-3">
+        <option value="">Carregando...</option>
+      </select>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Segunda Imagem</label>
+      <select id="compare-image-id-2" data-image-select class="w-full p-2 border rounded mb-4">
+        <option value="">Carregando...</option>
+      </select>
+      <div class="flex space-x-2">
+        <button id="add-compare-images-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg flex-1 hover:bg-blue-700">Comparar</button>
+        <button onclick="document.getElementById('compare-images-modal').classList.add('hidden')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400">Cancelar</button>
       </div>
     </div>
   </div>
@@ -217,6 +279,7 @@
   <script src="js/blocks/readFile.js"></script>
   <script src="js/blocks/displayImage.js"></script>
   <script src="js/blocks/saveFile.js"></script>
+  <script src="js/blocks/compareImages.js"></script>
   <script src="js/blocks/brightness.js"></script>
   <script src="js/blocks/threshold.js"></script>
   <script src="js/blocks/convolution.js"></script>

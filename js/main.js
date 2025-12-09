@@ -15,6 +15,7 @@ class PSEImage {
       readFile: new ReadFileBlock(this.imageStorage),
       displayImage: new DisplayImageBlock(this.canvas, this.imageStorage),
       saveFile: new SaveFileBlock(this.imageStorage),
+      compareImages: new CompareImagesBlock(this.canvas, this.imageStorage),
       brightness: new BrightnessBlock(),
       threshold: new ThresholdBlock(),
       convolution: new ConvolutionBlock(),
@@ -85,9 +86,19 @@ class PSEImage {
       });
     }
 
+    // Modal de exibição de imagem
+    document.getElementById('add-display-image-btn').addEventListener('click', () => {
+      this.handleDisplayImage();
+    });
+
     // Modal de salvar arquivo
     document.getElementById('add-save-file-btn').addEventListener('click', () => {
       this.handleSaveFile();
+    });
+
+    // Modal de comparar imagens
+    document.getElementById('add-compare-images-btn').addEventListener('click', () => {
+      this.handleCompareImages();
     });
 
     // Modal de histograma
@@ -107,8 +118,17 @@ class PSEImage {
         document.getElementById('read-file-modal').classList.remove('hidden');
         break;
       case 'display_image':
-        // Adiciona ao fluxo - será executado com a imagem atual do fluxo
-        this.addFlowStep('display_image', {});
+        // Abre modal para selecionar imagem a exibir
+        document.getElementById('display-image-modal').classList.remove('hidden');
+        this.updateImageSelects();
+        break;
+      case 'save_file':
+        document.getElementById('save-file-modal').classList.remove('hidden');
+        this.updateImageSelects();
+        break;
+      case 'compare_images':
+        document.getElementById('compare-images-modal').classList.remove('hidden');
+        this.updateImageSelects();
         break;
       case 'threshold':
         document.getElementById('threshold-modal').classList.remove('hidden');
@@ -118,9 +138,6 @@ class PSEImage {
         break;
       case 'convolution':
         document.getElementById('convolution-modal').classList.remove('hidden');
-        break;
-      case 'save_file':
-        document.getElementById('save-file-modal').classList.remove('hidden');
         break;
       case 'histogram':
         document.getElementById('histogram-modal').classList.remove('hidden');
@@ -226,6 +243,23 @@ class PSEImage {
     return kernel;
   }
 
+  handleDisplayImage() {
+    const imageId = document.getElementById('display-image-id').value;
+    
+    if (!imageId || !this.imageStorage.hasImage(imageId)) {
+      alert('Selecione uma imagem válida!');
+      return;
+    }
+
+    try {
+      const result = this.blocks.displayImage.process(imageId);
+      this.updateImageInfo(result.width, result.height);
+      document.getElementById('display-image-modal').classList.add('hidden');
+    } catch (error) {
+      alert('Erro ao exibir imagem: ' + error.message);
+    }
+  }
+
   handleSaveFile() {
     const imageId = document.getElementById('save-file-image-id').value;
     const filename = document.getElementById('save-file-filename').value || null;
@@ -237,10 +271,37 @@ class PSEImage {
 
     try {
       this.blocks.saveFile.process(imageId, filename);
-      this.addFlowStep('save_file', { imageId, filename });
       document.getElementById('save-file-modal').classList.add('hidden');
     } catch (error) {
       alert('Erro ao salvar arquivo: ' + error.message);
+    }
+  }
+
+  handleCompareImages() {
+    const imageId1 = document.getElementById('compare-image-id-1').value;
+    const imageId2 = document.getElementById('compare-image-id-2').value;
+    
+    if (!imageId1 || !imageId2) {
+      alert('Selecione duas imagens!');
+      return;
+    }
+
+    if (imageId1 === imageId2) {
+      alert('Selecione imagens diferentes!');
+      return;
+    }
+
+    if (!this.imageStorage.hasImage(imageId1) || !this.imageStorage.hasImage(imageId2)) {
+      alert('Uma ou ambas as imagens não foram encontradas!');
+      return;
+    }
+
+    try {
+      const result = this.blocks.compareImages.process(imageId1, imageId2);
+      this.updateImageInfo(result.width, result.height);
+      document.getElementById('compare-images-modal').classList.add('hidden');
+    } catch (error) {
+      alert('Erro ao comparar imagens: ' + error.message);
     }
   }
 
@@ -334,8 +395,6 @@ class PSEImage {
   getBlockLabel(type, params = {}) {
     const labels = {
       'read_file': 'Leitura de Arquivo',
-      'display_image': 'Exibição de Imagem',
-      'save_file': 'Gravação de Arquivo',
       'brightness': params?.value !== undefined ? `Brilho (${params.value})` : 'Brilho',
       'threshold': params?.value !== undefined ? `Limiarização (${params.value})` : 'Limiarização',
       'convolution': 'Convolução',
@@ -349,8 +408,6 @@ class PSEImage {
   getBlockIcon(type) {
     const icons = {
       'read_file': 'file-input',
-      'display_image': 'eye',
-      'save_file': 'save',
       'brightness': 'sun',
       'threshold': 'sliders-horizontal',
       'convolution': 'boxes',
@@ -403,15 +460,8 @@ class PSEImage {
           // Já temos a imagem
           continue;
         } else if (step.type === 'display_image') {
-          // Se tiver imageId específico, usar ele, senão usar a imagem atual do fluxo
-          const imageIdToDisplay = step.params?.imageId || currentImageId;
-          if (imageIdToDisplay) {
-            this.blocks.displayImage.process(imageIdToDisplay);
-            const imgToDisplay = this.imageStorage.getImage(imageIdToDisplay);
-            if (imgToDisplay) {
-              this.updateImageInfo(imgToDisplay.width, imgToDisplay.height);
-            }
-          }
+          // Ignorar - exibição de imagem não é mais parte do fluxo
+          continue;
         } else if (step.type === 'brightness') {
           const processed = this.blocks.brightness.process(image.rawData, step.params.value);
           currentImageId = this.imageStorage.addImage(processed, image.width, image.height);
@@ -438,8 +488,6 @@ class PSEImage {
           );
           currentImageId = this.imageStorage.addImage(processed, image.width, image.height);
           image = this.imageStorage.getImage(currentImageId);
-        } else if (step.type === 'save_file') {
-          this.blocks.saveFile.process(step.params.imageId, step.params.filename);
         } else if (step.type === 'histogram') {
           // Usar imageId específico se fornecido, senão usar imagem atual
           const imageIdForHistogram = step.params?.imageId || currentImageId;
@@ -458,10 +506,12 @@ class PSEImage {
         }
       }
 
-      // Exibir resultado final
+      // Exibir resultado final e atualizar selects
       if (currentImageId) {
         this.blocks.displayImage.process(currentImageId);
         this.updateImageInfo(image.width, image.height);
+        // Atualizar selects de imagem para incluir a nova imagem gerada
+        this.updateImageSelects();
       }
 
     } catch (error) {
